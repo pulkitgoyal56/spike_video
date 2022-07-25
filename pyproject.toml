@@ -1,0 +1,19 @@
+[project]
+name = "spike_video"
+version = "0.0.1"
+authors = [
+  { name="Pulkit Goyal", email="pulkitmds@gmail.com" },
+]
+description = "Synchronises Electrophysiology Spikes to Video"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/pulkitgoyal56/spike_video"
+"Bug Tracker" = "https://github.com/pulkitgoyal56/spike_video/issues"
