@@ -15,11 +15,20 @@ import matplotlib.animation as animation
 
 import mat73
 
-from moviepy.editor import VideoClip, VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip, CompositeAudioClip, clips_array, vfx
+from moviepy.editor import VideoClip, VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip, CompositeAudioClip, clips_array
 from moviepy.video.io.bindings import mplfig_to_npimage
 
 class SpikeVideo:
     def __init__(self, ephys_file, video_file) -> None:
+        """SpikeVideo class constructor.
+
+        Parameters
+        ----------
+        ephys_file : str
+            Electrophysiology recordings file location.
+        video_file : str
+            Corresponding video file location.
+        """
         self.ephys_file = ephys_file
         self.video_file = video_file
 
@@ -40,7 +49,7 @@ class SpikeVideo:
         self.spike_times = self.data_dict["times"][peak_indices[self.data_dict["trace"][peak_indices] > spike_threshold]]
 
 
-    def plot_spikes(self, t_b, t_a=0, ax=None, shade_stimulus=False, indicate_spikes=False, plot=True):
+    def plot_spikes(self, t_b, t_a=0, ax=None, plot_type='spike', shade_stimulus=True, indicate_spikes=False):
         """Plot the spike waveform.
 
         Parameters
@@ -51,39 +60,58 @@ class SpikeVideo:
             Window start time (s), by default 0.0.
         ax : matplotlib.axes.Axes, optional
             Axis to plot on, by default None.
+        plot_type : str, optional
+            Plot type, by default 'spike'.
+            'spike' - Spike time plot.
+            'raster' - Spike rater plot.
+            'histogram' - PSTH plot.
+        shade_stimulus : bool, optional
+            Shade the stimulus area for 'spike' plot, by default False.
+        indicate_spikes : bool, optional
+            Indicate spikes with a vertical line for 'spike' plot, by default False.
+
+        Returns
+        -------
+        numpy.ndarray
+            X-axis data.
+        numpy.ndarray
+            Y-axis data.
+        list of matplotlib objects
+            Value returned by specified plotting function, to be used for animation.
         """
-        
         if ax is None:
             fig, ax = plt.subplots(1, 1, figsize=(16, 4), dpi=40)
 
         a = int(t_a * self.spike_sampling_freq)
         n = int((t_b - t_a) * self.spike_sampling_freq) # Window size
 
-        ax.axhline(0, color='k', linestyle='--', linewidth=1)
+        if plot_type == 'spike':
+            ax.axhline(0, color='k', linestyle='--', linewidth=1)
 
-        if shade_stimulus:
-            for son, soff in zip(self.data_dict["stim_on"], self.data_dict["stim_off"]):
-                if son*self.spike_sampling_freq >= a+n: break
-                soff = min(soff, (a+n)/self.spike_sampling_freq)
-                ax.axvspan(son, soff, color='pink', alpha=0.1)
+            if shade_stimulus:
+                for son, soff in zip(self.data_dict["stim_on"], self.data_dict["stim_off"]):
+                    if son*self.spike_sampling_freq >= a+n: break
+                    soff = min(soff, (a+n)/self.spike_sampling_freq)
+                    ax.axvspan(son, soff, color='pink', alpha=0.1)
 
-        if indicate_spikes:
-            for spike_time in self.spike_times[(self.spike_times >= t_a) & (self.spike_times < t_b)]:
-                ax.axvline(spike_time, color='g', linestyle='-.')
+            if indicate_spikes:
+                for spike_time in self.spike_times[(self.spike_times >= t_a) & (self.spike_times < t_b)]:
+                    ax.axvline(spike_time, color='g', linestyle='-.')
         
-        if plot:
-            ax.plot(self.data_dict["times"][a:a+n], self.data_dict["trace"][a:a+n])
+            return self.data_dict["times"][a:a+n], self.data_dict["trace"][a:a+n], ax.plot(self.data_dict["times"][a:a+n], self.data_dict["trace"][a:a+n])
+        elif plot_type == 'raster':
+            return
+        elif plot_type == 'histogram':
+            return
         
-        return self.data_dict["times"][a:a+n], self.data_dict["trace"][a:a+n]
-
         ## FFT
         # ax[1].axhline(0, color='k', linestyle='--')
         # ax[1].plot(np.fft.fftshift(np.fft.fftfreq(n, 1/self.spike_sampling_freq)), np.abs(np.fft.fftshift(np.fft.fft(self.data_dict["trace"][a:a+n]))))
         # ax[1].set_xticks(np.arange(-int(self.spike_sampling_freq/2), int(self.spike_sampling_freq/2), 1000))
         # ax[1].set_xlim([-self.spike_sampling_freq/2, self.spike_sampling_freq/2]);
 
-    def generate_video(self, t_b, t_a=0.0, speed=1.0, t_w=1.0, fps=None, transition='roll', save=True, output=".temp/__temp__.mp4"):
-        """Generate spike video
+    def generate_plot(self, t_b, t_a=0.0, speed=1.0, t_w=1.0, fps=None, plot_type='spike', transition='roll', save=True, output=".temp/__temp__.mp4"):
+        """Generate plot animation of specified plot type.
 
         Parameters
         ----------
@@ -93,24 +121,36 @@ class SpikeVideo:
             Window start time (s), by default 0.0.
         speed : float, optional
             Playback speed, by default 1.0.
-        t_w : float, optional
-            Window size (s) if transition is 'window', by default 1.0.
         fps : int, optional
             Frames per second, by default None.
-        transition : {'roll', 'window'}, optional, optional
-            Type of video animation, by default 'roll'
+        t_w : float, optional
+            Window size (s) if transition is 'window', by default 1.0.
+        plot_type: str, optional
+            Plot type, by default 'spike'.
+            'spike' - Spike time plot.
+            'raster' - Spike rater plot.
+            'histogram' - PSTH plot.
+        transition : {'roll', 'window'}, optional
+            Type of video animation, by default 'roll'.
             'roll' - Growing spike waveform.
             'window' - Shifting window waveform.
         save : bool, optional
             Save video as .mp4?, by default True.
         output : str, optional
-            Output file name, by default 'roll.wav'.
+            Output file name, by default '.temp/__temp__.mp4'.
+
+        Returns
+        -------
+        matplotlib.animation.FuncAnimation or moviepy.editor.VideoClip object
+            Video object file for layouting.
+        int
+            FPS of the video.
         """
         if speed is None:
             if transition == 'roll':
                 speed = round((t_b - t_a)/5.0, 3) #1-5
             elif transition == 'window':
-                speed = round(t_w/1.0, 3)     #1-5
+                speed = round(t_w/1.0, 3)         #1-5
 
         sfps = max(24, np.ceil(fps if fps else min(120, self.spike_sampling_freq*speed, self.video_frame_rate*speed)))
 
@@ -121,11 +161,11 @@ class SpikeVideo:
         ax.set_ylim(-0.001, 0.002)
         ax.axis('off')
 
-        if transition == 'window':
+        if transition == 'window' and plot_type == 'spike':
             def make_frame(t):
                 ax.clear()
                 ax.set_xlim(t_a + t*speed, t_a + t_w + t*speed)        
-                self.plot_spikes(t_a + t_w + t*speed, t_a + t*speed, ax=ax, shade_stimulus=True, indicate_spikes=False, plot=False)
+                self.plot_spikes(t_a + t_w + t*speed, t_a + t*speed, ax=ax, plot_type='spike', shade_stimulus=True, indicate_spikes=False)
                 return mplfig_to_npimage(fig)
             
             video = VideoClip(make_frame, duration=(t_b - t_w - t_a)/speed)
@@ -135,8 +175,7 @@ class SpikeVideo:
         elif transition == 'roll':
             ax.set_xlim(t_a, t_b)
 
-            x, y = self.plot_spikes(t_b, t_a, ax=ax, shade_stimulus=True, indicate_spikes=False, plot=False)
-            line, = ax.plot(x, y)
+            x, y, (line,) = self.plot_spikes(t_b, t_a, ax=ax, plot_type=plot_type, shade_stimulus=True, indicate_spikes=False)
             plt.tight_layout()
 
             def update(frame):
@@ -169,7 +208,14 @@ class SpikeVideo:
         save : bool, optional
             Save audio as .wav?, by default True.
         output : str, optional
-            Output file name, by default 'roll.wav'.
+            Output file name, by default '.temp/__temp__.wav'.
+
+        Returns
+        -------
+        numpy.ndarray
+            Audio waveform.
+        int
+            Samples/s of the audio signal.
         """
         if speed is None: speed = round((t_b - t_a)/5.0, 3) #1-5
         
@@ -197,9 +243,22 @@ class SpikeVideo:
         
         return audio, afps
 
-    def generate(self, t_b, t_a=0.0, speed=1.0, fps=None, output="spike.mp4"):
-        _, afps = self.generate_audio(t_b, t_a, speed, output=".temp/__temp__.wav")
-        _, sfps = self.generate_video(t_b, t_a, speed, fps=fps, save=True, output=".temp/__temp__.mp4")
+    def generate(self, t_b, t_a=0.0, speed=1.0, output="spike.mp4"):
+        """Generate complete video.
+
+        Parameters
+        ----------
+        t_b : float
+            Window start time (s).
+        t_a : float, optional
+            Window start time (s), by default 0.0.
+        speed : float, optional
+            Playback speed, by default 1.0.
+        output : str, optional
+            Output file name, by default '.temp/__temp__.wav'.
+        """
+        _, afps = self.generate_audio(t_b, t_a, speed, save=True, output=".temp/__temp__.wav")
+        _, sfps = self.generate_plot(t_b, t_a, speed, save=True, output=".temp/__temp__.mp4")
         
         spike_video = VideoFileClip(".temp/__temp__.mp4")
         spike_audio = AudioFileClip(".temp/__temp__.wav")
