@@ -27,10 +27,13 @@ TONE_FREQUENCY = 200        # Chirp frequency for audio (Hz)
 TONE_DURATION = 0.002       # Chirp duration for audio (s)
 
 FIG_SIZE = {
-    'spike': (16, 3.2),
-    'raster': (3.2, 6.4),
-    'histogram': (3.2, 6.4),
+    'spike': (16, 4.8),
+    'raster': (4.8, 9.6),
+    'histogram': (4.8, 4.8)
 }
+BITRATE = 1000              # Bitrate of the animation video
+DPI = 40                    # Dots/inch of the animation figures
+BLIT = False                # Blit paramter for matplotlib animation
 
 class SpikeVideo:
     def __init__(self, ephys_file, video_file) -> None:
@@ -132,7 +135,7 @@ class SpikeVideo:
             Y-axis data.
         """
         if ax is None:
-            fig, ax = plt.subplots(1, 1, figsize=(figsize if figsize else FIG_SIZE[plot_type]), dpi=40)
+            fig, ax = plt.subplots(1, 1, figsize=(figsize if figsize else FIG_SIZE[plot_type]), dpi=DPI)
 
         a = int(t_a * self.spike_sampling_freq)
         n = int((t_b - t_a) * self.spike_sampling_freq) # Window size
@@ -239,7 +242,7 @@ class SpikeVideo:
 
         print(f"> Estimated Video Length ~ {(t_b - (0 if transition == 'roll' else t_w) - t_a)/speed:.2f}s @ {sfps:>5} fps  | [{t_a:.3f}s, {t_b:.3f}s] @ {speed}x <{transition[0]}> -- `{output}`")
 
-        fig, ax = plt.subplots(1, 1, figsize=(figsize if figsize else FIG_SIZE[plot_type]), dpi=40)
+        fig, ax = plt.subplots(1, 1, figsize=(figsize if figsize else FIG_SIZE[plot_type]), dpi=DPI)
 
         if plot_type == 'spike':
             if transition == 'roll':
@@ -304,8 +307,8 @@ class SpikeVideo:
                             rect.set_height(rect.get_height() + count)
                         return obj.patches
 
-            video = animation.FuncAnimation(fig, update, frames=int((t_b - t_a)/speed*sfps), interval=int(1000/sfps), blit=False)
-            if save: video.save(output, writer=animation.FFMpegWriter(fps=sfps))
+            video = animation.FuncAnimation(fig, update, frames=int((t_b - t_a)/speed*sfps), interval=int(1000/sfps), blit=BLIT)
+            if save: video.save(output, writer=animation.FFMpegWriter(fps=sfps, bitrate=BITRATE))
         
         plt.close()
         
@@ -404,7 +407,7 @@ class SpikeVideo:
         txt_clip = TextClip(f"x{speed}", fontsize=75, color='black')
         txt_clip = txt_clip.set_position(("right", "top")).set_duration((t_b-t_a)/speed)
         
-        clips_array([[CompositeVideoClip([video_x, txt_clip]), raster_video], [spike_video, histogram_video]]).write_videofile(output) #, verbose=False, logger=None)
+        clips_array([[CompositeVideoClip([video_x, txt_clip]), raster_video], [spike_video, histogram_video]]).write_videofile(output, fps=sfps) #, audio_fps=afps, verbose=False, logger=None)
 
 if __name__ == '__main__':
     pass
