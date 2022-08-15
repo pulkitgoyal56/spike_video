@@ -20,16 +20,16 @@ from moviepy.video.io.bindings import mplfig_to_npimage
 
 ## CONSTANTS
 T_W = 0                     # Window length for windowed spike plot (s)
-T_W_ = (-10e-2, 10e-2)      # Window length for histogram and raster plots (s)
-BIN_SIZE = 2e-3             # Bin size for histogram and raster plots (s)
+T_W_ = (-50e-3, 50e-3)      # Window length for histogram and raster plots (s)
+BIN_SIZE = 4e-3             # Bin size for histogram and raster plots (s)
 
 TONE_FREQUENCY = 200        # Chirp frequency for audio (Hz)
 TONE_DURATION = 0.002       # Chirp duration for audio (s)
 
 FIG_SIZE = {
     'spike': (16, 4.8),
-    'raster': (4.8, 9.6),
-    'histogram': (4.8, 4.8)
+    'raster': (7.2, 9.6),
+    'histogram': (7.2, 4.8)
 }
 BITRATE = 1000              # Bitrate of the animation video
 DPI = 40                    # Dots/inch of the animation figures
@@ -150,13 +150,13 @@ class SpikeVideo:
                 for son, soff in zip(self.data_dict["stim_on"], self.data_dict["stim_off"]):
                     if son*self.spike_sampling_freq >= a+n: break
                     soff = min(soff, (a+n)/self.spike_sampling_freq)
-                    ax.axvspan(son, soff, color='pink', alpha=0.1)
+                    ax.axvspan(son, soff, color='pink', alpha=0.5)
 
             if indicate_spikes:
                 for spike_time in self.spike_times[(self.spike_times >= t_a) & (self.spike_times < t_b)]:
                     ax.axvline(spike_time, color='r', linestyle='-.')
         
-            obj, = ax.plot(x, y, color='k')
+            obj, = ax.plot(x, y, color='k', alpha=0.5)
         else:
             x = spike_times = self.spike_times[(self.spike_times >= t_a) & (self.spike_times < t_b)]
             y = stimulus_times = self.data_dict["stim_on"][(self.data_dict["stim_on"] >= t_a) & (self.data_dict["stim_on"] < t_b)]
@@ -253,10 +253,13 @@ class SpikeVideo:
         else:
             if plot_type == 'raster':
                 ax.set_xticks([])
+            elif plot_type == 'histogram':
+                ax.set_xticks([0]) # ax.set_xticks([int(t_w[0]*1000), 0, int(t_w[1]*1000)])
+                ax.set_xticklabels([''], fontsize=800/DPI)
 
             ax.set_xlim(t_w)
             ax.set_yticks([])
-            ax.axvline(0, color='r', linestyle='--')
+            ax.axvline(0, color='r', linestyle='--', linewidth=3)
 
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
@@ -282,7 +285,7 @@ class SpikeVideo:
             if plot_type == 'raster':
                 ax.set_ylim([-0.5, len(obj) - 0.5])
             elif plot_type == 'histogram':
-                ax.set_ylim([0, len(obj)/10])
+                ax.set_ylim([0, len(obj)*bin_size*1000/6])
 
             def update(frame):
                 s = frame*speed/sfps
@@ -367,7 +370,7 @@ class SpikeVideo:
         
         return audio, afps
 
-    def generate_video(self, t_b, t_a=0.0, speed=1.0, t_w=T_W_, bin_size=BIN_SIZE, tone_frequency=TONE_FREQUENCY, tone_duration=TONE_DURATION, output=".temp/__output__.mp4"):
+    def generate_video(self, t_b, t_a=0.0, speed=1.0, t_w=T_W_, bin_size=BIN_SIZE, tone_frequency=TONE_FREQUENCY, tone_duration=TONE_DURATION, output=".temp/__output__.mp4", cache=False):
         """Generate complete video.
 
         Parameters
@@ -388,13 +391,22 @@ class SpikeVideo:
             Duration of spike chirp, by default `TONE_DURATION`.
         output : str, optional
             Output file name, by default '.temp/__output__.mp4'.
+        cache : bool, optional
+            If True, previously save plots are used.
         """
-        _, sfps = self.generate_plot(t_b, t_a, speed, t_w, bin_size, save=True, output=".temp/__temp__spike__.mp4")
-        _______ = self.generate_plot(t_b, t_a, speed, t_w, bin_size, save=True, plot_type='raster', output=".temp/__temp__raster__.mp4")
-        _______ = self.generate_plot(t_b, t_a, speed, t_w, bin_size, save=True, plot_type='histogram', output=".temp/__temp__histogram__.mp4")
-        
-        _, afps = self.generate_audio(t_b, t_a, speed, tone_frequency, tone_duration, save=True, output=".temp/__temp__.wav")
+        if not cache:
+            _, sfps = self.generate_plot(t_b, t_a, speed, t_w, bin_size, save=True, output=".temp/__temp__spike__.mp4")
+            _______ = self.generate_plot(t_b, t_a, speed, t_w, bin_size, save=True, plot_type='raster', output=".temp/__temp__raster__.mp4")
+            _______ = self.generate_plot(t_b, t_a, speed, t_w, bin_size, save=True, plot_type='histogram', output=".temp/__temp__histogram__.mp4")
+            
+            _, afps = self.generate_audio(t_b, t_a, speed, tone_frequency, tone_duration, save=True, output=".temp/__temp__.wav")
+        else:
+            sfps = max(24, np.ceil(min(120, self.spike_sampling_freq*speed, self.video_frame_rate*speed)))
+            print(f"> Using Cached Videos    ~ {(t_b - t_a)/speed:.2f}s @ {sfps:>5} fps  | [{t_a:.3f}s, {t_b:.3f}s] @ {speed}x <r> -- `{output}`")
 
+            afps = int(self.spike_sampling_freq*speed)
+            print(f"> Using Cached Audio     ~ {(t_b - t_a)/speed:.2f}s @ {afps:>5} afps | [{t_a:.3f}s, {t_b:.3f}s] @ {speed}x     -- `{output}`")
+        
         video_x = self.video.subclip(t_a, t_b).speedx(speed).set_fps(sfps)
 
         spike_video = VideoFileClip(".temp/__temp__spike__.mp4")
@@ -404,10 +416,33 @@ class SpikeVideo:
         spike_audio = AudioFileClip(".temp/__temp__.wav")
         spike_video.audio = CompositeAudioClip([spike_audio])
 
-        txt_clip = TextClip(f"x{speed}", fontsize=75, color='black')
-        txt_clip = txt_clip.set_position(("right", "top")).set_duration((t_b-t_a)/speed)
+        txt_clip_label_video = TextClip(f"x{speed}", fontsize=75, color='black').set_position(("right", "top")).set_duration((t_b-t_a)/speed)
+        txt_clip_label_spike = TextClip(f"Whisker Stimulus", fontsize=25, color='red').set_position(("right", "top")).set_duration((t_b-t_a)/speed)
+        txt_clip_label_histogram_1 = TextClip(f"{int(t_w[0]*1000)} ms", fontsize=10, color='black').set_position(("left", "bottom")).set_duration((t_b-t_a)/speed)
+        txt_clip_label_histogram_2 = TextClip(f"0", fontsize=10, color='black').set_position(("center", "bottom")).set_duration((t_b-t_a)/speed)
+        txt_clip_label_histogram_3 = TextClip(f"{int(t_w[1]*1000)} ms", fontsize=10, color='black').set_position(("right", "bottom")).set_duration((t_b-t_a)/speed)
         
-        clips_array([[CompositeVideoClip([video_x, txt_clip]), raster_video], [spike_video, histogram_video]]).write_videofile(output, fps=sfps) #, audio_fps=afps, verbose=False, logger=None)
+        clips_array([
+            [
+                CompositeVideoClip([
+                    video_x, 
+                    txt_clip_label_video
+                ]), 
+                raster_video
+            ], 
+            [
+                CompositeVideoClip([
+                    spike_video, 
+                    txt_clip_label_spike
+                ]), 
+                CompositeVideoClip([
+                    histogram_video, 
+                    txt_clip_label_histogram_1, 
+                    txt_clip_label_histogram_2, 
+                    txt_clip_label_histogram_3
+                ])
+            ]
+        ]).write_videofile(output, fps=sfps) #, audio_fps=afps, verbose=False, logger=None)
 
 if __name__ == '__main__':
     pass
