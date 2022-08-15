@@ -20,8 +20,8 @@ from moviepy.video.io.bindings import mplfig_to_npimage
 
 ## CONSTANTS
 T_W = 0                     # Window length for windowed spike plot (s)
-T_W_ = (-50e-3, 50e-3)      # Window length for histogram and raster plots (s)
-BIN_SIZE = 4e-3             # Bin size for histogram and raster plots (s)
+T_W_ = (-40e-3, 40e-3)      # Window length for histogram and raster plots (s)
+BIN_SIZE = 2.5e-3             # Bin size for histogram and raster plots (s)
 
 TONE_FREQUENCY = 200        # Chirp frequency for audio (Hz)
 TONE_DURATION = 0.002       # Chirp duration for audio (s)
@@ -255,7 +255,7 @@ class SpikeVideo:
                 ax.set_xticks([])
             elif plot_type == 'histogram':
                 ax.set_xticks([0]) # ax.set_xticks([int(t_w[0]*1000), 0, int(t_w[1]*1000)])
-                ax.set_xticklabels([''], fontsize=800/DPI)
+                ax.set_xticklabels([' '], fontsize=480/DPI)
 
             ax.set_xlim(t_w)
             ax.set_yticks([])
@@ -285,7 +285,7 @@ class SpikeVideo:
             if plot_type == 'raster':
                 ax.set_ylim([-0.5, len(obj) - 0.5])
             elif plot_type == 'histogram':
-                ax.set_ylim([0, len(obj)*bin_size*1000/6])
+                ax.set_ylim([0, len(obj)*bin_size*1000/4])
 
             def update(frame):
                 s = frame*speed/sfps
