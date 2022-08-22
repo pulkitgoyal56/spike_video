@@ -71,7 +71,7 @@ class SpikeVideo:
     #     Parameters
     #     ----------
     #     t_b : float
-    #         Window start time (s).
+    #         Window end time (s).
     #     t_a : float, optional
     #         Window start time (s), by default 0.0.
     #     t_w : tuple of floats, optional
@@ -103,7 +103,7 @@ class SpikeVideo:
         Parameters
         ----------
         t_b : float
-            Window start time (s).
+            Window end time (s).
         t_a : float, optional
             Window start time (s), by default 0.0.
         ax : matplotlib.axes.Axes, optional
@@ -186,7 +186,7 @@ class SpikeVideo:
         Parameters
         ----------
         t_b : float
-            Window start time (s).
+            Window end time (s).
         t_a : float, optional
             Window start time (s), by default 0.0.
         speed : float, optional
@@ -323,7 +323,7 @@ class SpikeVideo:
         Parameters
         ----------
         t_b : float
-            Window start time (s).
+            Window end time (s).
         t_a : float, optional
             Window start time (s), by default 0.0.
         speed : float, optional
@@ -376,7 +376,7 @@ class SpikeVideo:
         Parameters
         ----------
         t_b : float
-            Window start time (s).
+            Window end time (s).
         t_a : float, optional
             Window start time (s), by default 0.0.
         speed : float, optional
@@ -392,7 +392,7 @@ class SpikeVideo:
         output : str, optional
             Output file name, by default '.temp/__output__.mp4'.
         cache : bool, optional
-            If True, previously save plots are used.
+            If True, previously saved plots are used, by default False.
         """
         if not cache:
             _, sfps = self.generate_plot(t_b, t_a, speed, t_w, bin_size, save=True, output=".temp/__temp__spike__.mp4")
