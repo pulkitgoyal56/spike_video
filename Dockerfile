@@ -6,7 +6,11 @@ WORKDIR /app
 
 RUN apt -y update
 RUN apt -y upgrade
+
 RUN apt install -y ffmpeg
+
+RUN apt install -y imagemagick
+RUN sed -i '/<policy domain="path" rights="none" pattern="@\*"/d' /etc/ImageMagick-6/policy.xml
 
 RUN pip3 install jupyterlab
 

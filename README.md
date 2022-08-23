@@ -5,6 +5,7 @@ Synchronises Electrophysiology Spikes to Video.
 ## Dependencies
 
 - [FFmpeg](https://ffmpeg.org/)  
+- [ImageMagick](https://imagemagick.org/)  
 - [Python3 requirements](./requirements.txt)  
 
 ## Setup
