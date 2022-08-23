@@ -1,6 +1,24 @@
 # Spike Video
 
-Synchronises Electrophysiology Spikes to Video.  
+## Overview
+
+Create different animated plots from electrophysiology data to be synchronsed and added to a video.
+
+## Main Features
+
+- Generate Animated Spike Plot
+    - Sliding Window -- A clipping window of fixed width slides over the duration
+    - Rolling Window -- The spikes apeear with time over the entire duration
+- Generate Animated Raster Plot
+- Generate Animated Histogram
+- Generate Audio to go with the plots
+- Merge all animation with video into one video
+
+## Additional Features
+
+- Primitive Caching
+- Dockerised Applet
+
 
 ## Dependencies
 
